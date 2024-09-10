@@ -10,7 +10,8 @@
       "name": "HelloWorld",
       "program": "opt-18",
       "args": ["-load-pass-plugin", "build/lib/libHelloWorld.so", "-passes=hello-world", "inputs/dijkstra/dijkstra.ll" ],
-      "cwd": "${workspaceFolder}"
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "PreDebug"
     }
   ]
 }

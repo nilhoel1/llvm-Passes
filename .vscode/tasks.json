@@ -6,11 +6,30 @@
     {
       "label": "Build",
       "type": "shell",
-      "command": "cd build ; make",
+      "command": "cd build ; ninja",
       "group": {
         "kind": "build",
         "isDefault": true
+      },
+    },
+    {
+      "label": "Configure",
+      "type": "shell",
+      "command": "rm -rf build ; rm compile_commanbds.json ; mkdir build ; cd build ; cmake -DLT_LLVM_INSTALL_DIR=/usr/lib/llvm-18/ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .. -GNinja ; cp compile_commands.json ..",
+      "group": {
+        "kind": "build",
+        "isDefault": false
       }
+    },
+    {
+      "label": "GenereateDijkstraLL",
+      "type": "shell",
+      "command": "cd inputs/dijkstra ; clang -emit-llvm -O0 -Xclang -disable-O0-optnone -S dijkstra.c -o dijkstra.ll"
+    },
+
+    {
+      "label": "PreDebug",
+      "dependsOn": ["Build", "GenereateDijkstraLL"]
     }
   ]
 }

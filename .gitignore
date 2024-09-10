@@ -35,8 +35,12 @@
 *.ll
 *.bc
 
-# Build folder
+# Build
 build
+compile_commands.json
+
+# Clangd
+.cache
 
 # MacOS
 .DS_Store
