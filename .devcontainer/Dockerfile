@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y \
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 RUN apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main"
 RUN apt-get update
-RUN apt-get install -y llvm-18 llvm-18-dev llvm-18-tools clang-18
+RUN apt-get install -y llvm-18 llvm-18-dev llvm-18-tools clang-18 clangd-18 lld-18
 RUN apt-get install -y python3-setuptools
 
 # 2. INSTALL LIT
