@@ -1,0 +1,59 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.241.1/containers/ubuntu
+{
+	"name": "Ubuntu",
+	"build": {
+		"dockerfile": "Dockerfile",
+		// Update 'VARIANT' to pick an Ubuntu version: jammy / ubuntu-22.04, focal / ubuntu-20.04, bionic /ubuntu-18.04
+		// Use ubuntu-22.04 or ubuntu-18.04 on local arm64/Apple Silicon.
+		"args": {
+			"VARIANT": "ubuntu-22.04"
+		}
+	},
+	"runArgs": [
+		"--network=host"
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"shakram02.bash-beautify",
+				"mads-hartmann.bash-ide-vscode",
+				"matepek.vscode-catch2-test-adapter",
+				"xaver.clang-format",
+				"llvm-vs-code-extensions.vscode-clangd",
+				"twxs.cmake",
+				"vadimcn.vscode-lldb",
+				"cschlosser.doxdocgen",
+				"phil294.git-log--graph",
+				"github.copilot",
+				"github.copilot-chat",
+				"eamodio.gitlens",
+				"ms-vscode.makefile-tools",
+				"yzhang.markdown-all-in-one",
+				"llvm-vs-code-extensions.vscode-mlir",
+				"gruntfuggly.todo-tree",
+				"maziac.asm-code-lens"
+			]
+		}
+	},
+	"appPort": [
+		10245,
+		8765,
+		8766
+	],
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [
+		"host:10245",
+		"host:8765",
+		"host:8766"
+	],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "uname -a",
+	"postStartCommand": "nohup bash -c 'iceccd &' >/dev/null 2>&1",
+	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode",
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/meaningful-ooo/devcontainer-features/fish:1": {}
+	}
+}
