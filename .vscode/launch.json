@@ -9,7 +9,15 @@
       "request": "launch",
       "name": "HelloWorld",
       "program": "opt-18",
-      "args": ["-load-pass-plugin", "build/lib/libHelloWorld.so", "-passes=hello-world", "inputs/dijkstra/dijkstra.ll" ],
+      "args": [
+        "-load-pass-plugin",
+        "build/lib/libHelloWorld.so",
+        "-passes=hello-world",
+        "inputs/dijkstra/dijkstra.ll",
+        "-S",
+        "-o",
+        "inputs/dijkstra/dijkstraOut.ll"
+        ],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "PreDebug"
     }
