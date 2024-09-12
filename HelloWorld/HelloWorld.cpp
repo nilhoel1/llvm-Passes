@@ -23,6 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <llvm-18/llvm/IR/Constant.h>
+#include <llvm-18/llvm/IR/Instruction.h>
 #include <llvm-18/llvm/Support/Casting.h>
 
 using namespace llvm;
@@ -44,6 +45,7 @@ struct HelloWorld : PassInfoMixin<HelloWorld> {
   // Main entry point, takes IR unit to run the pass on (&F) and the
   // corresponding pass manager (to be queried if need be)
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    // TODO The IRBuilder uses Constant folding on the XorInstruction and will fail on all Constants, if the masks are changed.
     if (!ConstAdded) {
       // Add ConstantS with only ones to the module
       LLVMContext &Ctx = F.getContext();
@@ -68,10 +70,9 @@ struct HelloWorld : PassInfoMixin<HelloWorld> {
         if (I.getOpcode() == Instruction::Load) {
           // Cast I to llvm::Value
           LoadInst *LoadOp = dyn_cast<LoadInst>(&I);
-          // errs() << "(llvm-tutor)   instruction: \033[1;31m" << *LoadOp
-          //        << "\033[0m\n";
           // Create IRBuilder
           IRBuilder<> Builder(&I);
+          // Add new Instructions after LoadOp
           Builder.SetInsertPoint(I.getNextNode());
           bool isPointer = I.getType()->isPointerTy();
           // Create XorMask based on the type of the loaded value
@@ -142,8 +143,91 @@ struct HelloWorld : PassInfoMixin<HelloWorld> {
               U->set(CastInst1);
             else
               U->set(XorInst);
-            errs() << "\n";
+            // errs() << "\n";
           }
+        } else if (I.getOpcode() == Instruction::Store) {
+          // Cast I to llvm::Value
+          StoreInst *StoreOp = dyn_cast<StoreInst>(&I);
+          // Print StoreOp
+          errs() << "(llvm-tutor)   instructionPre: \033[1;31m" << *StoreOp
+                 << "\033[0m\n";
+
+          // Create IRBuilder
+          IRBuilder<> Builder(&I);
+          // Check if I is of pointer type
+          bool isPointer = StoreOp->getValueOperand()->getType()->isPointerTy();
+          // Create XorMask based on the type of the loaded value
+          ConstantInt *XorMask = nullptr;
+          Type *CurrentType = nullptr;
+          if (StoreOp->getValueOperand()->getType()->isIntegerTy(64) ||
+              isPointer) {
+            XorMask = XorMask64;
+            CurrentType = Type::getInt64Ty(F.getContext());
+          } else if (StoreOp->getValueOperand()->getType()->isIntegerTy(32)) {
+            XorMask = XorMask32;
+            CurrentType = Type::getInt32Ty(F.getContext());
+          } else if (StoreOp->getValueOperand()->getType()->isIntegerTy(16)) {
+            XorMask = XorMask16;
+            CurrentType = Type::getInt16Ty(F.getContext());
+          } else if (StoreOp->getValueOperand()->getType()->isIntegerTy(8)) {
+            XorMask = XorMask8;
+            CurrentType = Type::getInt8Ty(F.getContext());
+          }
+          // XorMask and CurrentType have to be set at this point!
+          assert(XorMask != nullptr && "Failed to create XorMask");
+          assert(CurrentType != nullptr && "Failed to set CurrentType");
+          // Flip Word before it is stored.
+          // 1. Cast to Inttype
+          // 2. Xor with XorMask
+          // 3. Cast back to original type
+          // 4. change Stored value with the flipped Value
+
+          // Cast StoreOp to IntType
+          bool CastInst0Set = false;
+          Value *CastInst0 = nullptr;
+          if (isPointer) {
+            CastInst0Set = true;
+            CastInst0 = Builder.CreatePtrToInt(
+                StoreOp->getValueOperand(), Type::getInt64Ty(F.getContext()));
+          } else if (StoreOp->getValueOperand()->getType() != CurrentType) {
+            CastInst0Set = true;
+            CastInst0 = Builder.CreateZExtOrBitCast(StoreOp->getValueOperand(),
+                                                    CurrentType);
+          }
+          if (CastInst0Set)
+            assert(CastInst0 != nullptr && "Failed to create CastInst0");
+
+          // add xor instruction, which xors the loaded value with the XorMask
+          Value *XorInst = nullptr;
+          if (CastInst0Set)
+            XorInst = Builder.CreateXor(CastInst0, XorMask);
+          else
+            XorInst = Builder.CreateXor(StoreOp->getValueOperand(), XorMask);
+          assert(XorInst != nullptr && "Failed to create XorInst");
+
+          // cast the result of the xor operation back to the original type
+          bool CastInst1Set = false;
+          Value *CastInst1 = nullptr;
+          if (isPointer) {
+            CastInst1Set = true;
+            CastInst1 = Builder.CreateIntToPtr(
+                XorInst, StoreOp->getValueOperand()->getType());
+          } else if (StoreOp->getValueOperand()->getType() != CurrentType) {
+            CastInst1Set = true;
+            CastInst1 = Builder.CreateBitCast(
+                XorInst, StoreOp->getValueOperand()->getType());
+          }
+          if (CastInst1Set)
+            assert(CastInst1 != nullptr && "Failed to create CastInst1");
+
+          // Replace Store Value with CastInst1 or XorInst
+          if (CastInst1Set)
+            StoreOp->setOperand(0, CastInst1);
+          else
+            StoreOp->setOperand(0, XorInst);
+          // Print StoreOp After changes
+          errs() << "(llvm-tutor)   instructionPost: \033[1;31m" << *StoreOp
+                 << "\033[0m\n\n";
         }
       }
     }
