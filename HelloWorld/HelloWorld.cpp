@@ -37,30 +37,27 @@ namespace {
 
 // New PM implementation
 struct HelloWorld : PassInfoMixin<HelloWorld> {
-  bool ConstAdded = false;
-  ConstantInt *XorMask64;
-  ConstantInt *XorMask32;
-  ConstantInt *XorMask16;
-  ConstantInt *XorMask8;
+  bool ConstantsAdded = false;
+  Constant *XorMask64;
+  Constant *XorMask32;
+  Constant *XorMask16;
+  Constant *XorMask8;
+
+  void addConstants(Function &F){
+      // Add Global Values with only ones to the module
+      Module &M = *F.getParent();
+       XorMask64 = M.getOrInsertGlobal("XorMask64", Type::getInt64Ty(F.getContext()));
+       XorMask32 = M.getOrInsertGlobal("XorMask32", Type::getInt32Ty(F.getContext()));
+       XorMask16 = M.getOrInsertGlobal("XorMask16", Type::getInt16Ty(F.getContext()));
+       XorMask8 = M.getOrInsertGlobal("XorMask8", Type::getInt8Ty(F.getContext()));
+      ConstantsAdded = true;}
   // Main entry point, takes IR unit to run the pass on (&F) and the
   // corresponding pass manager (to be queried if need be)
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     // TODO The IRBuilder uses Constant folding on the XorInstruction and will fail on all Constants, if the masks are changed.
-    if (!ConstAdded) {
-      // Add ConstantS with only ones to the module
-      LLVMContext &Ctx = F.getContext();
-      auto *AddedMask64 =
-          ConstantInt::get(Type::getInt64Ty(Ctx), 0xFFFFFFFFFFFFFFFF, false);
-      XorMask64 = AddedMask64;
-      auto *AddedMask32 =
-          ConstantInt::get(Type::getInt32Ty(Ctx), 0xFFFFFFFF, false);
-      XorMask32 = AddedMask32;
-      auto *AddedMask16 =
-          ConstantInt::get(Type::getInt16Ty(Ctx), 0xFFFF, false);
-      XorMask16 = AddedMask16;
-      auto *AddedMask8 = ConstantInt::get(Type::getInt8Ty(Ctx), 0xFF, false);
-      XorMask8 = AddedMask8;
-    }
+    if (!ConstantsAdded)
+      addConstants(F);
+    // TODO Load value from XorMask64, as it is now a constant and not an immediate, as it was before.
 
     // iterate over the basic blocks in the function
     for (auto &BB : F) {
@@ -76,7 +73,7 @@ struct HelloWorld : PassInfoMixin<HelloWorld> {
           Builder.SetInsertPoint(I.getNextNode());
           bool isPointer = I.getType()->isPointerTy();
           // Create XorMask based on the type of the loaded value
-          ConstantInt *XorMask = nullptr;
+          Constant *XorMask = nullptr;
           Type *CurrentType = nullptr;
           if (I.getType()->isIntegerTy(64) || I.getType()->isPointerTy()) {
             XorMask = XorMask64;
@@ -146,6 +143,8 @@ struct HelloWorld : PassInfoMixin<HelloWorld> {
             // errs() << "\n";
           }
         } else if (I.getOpcode() == Instruction::Store) {
+          if (!ConstantsAdded)
+            addConstants(F);
           // Cast I to llvm::Value
           StoreInst *StoreOp = dyn_cast<StoreInst>(&I);
           // Print StoreOp
@@ -157,7 +156,7 @@ struct HelloWorld : PassInfoMixin<HelloWorld> {
           // Check if I is of pointer type
           bool isPointer = StoreOp->getValueOperand()->getType()->isPointerTy();
           // Create XorMask based on the type of the loaded value
-          ConstantInt *XorMask = nullptr;
+          Constant *XorMask = nullptr;
           Type *CurrentType = nullptr;
           if (StoreOp->getValueOperand()->getType()->isIntegerTy(64) ||
               isPointer) {
